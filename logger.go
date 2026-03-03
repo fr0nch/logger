@@ -58,10 +58,13 @@ type Logger struct {
 	date string
 }
 
+// New creates a new Logger with default options.
 func New() (*Logger, error) {
 	return NewWithOptions(Options{})
 }
 
+// NewWithOptions creates a new Logger with the provided options.
+// It initializes the log directory, opens the first log file, and starts the background writer.
 func NewWithOptions(opts Options) (*Logger, error) {
 	opts.withDefaults()
 	dir := filepath.Join(plugify.LogsDir, opts.Folder)
@@ -163,6 +166,8 @@ func (l *Logger) write(level, msg string) {
 	}
 }
 
+// Close gracefully shuts down the logger, flushing all pending log entries and closing the log file.
+// It is safe to call Close multiple times.
 func (l *Logger) Close() {
 	l.once.Do(func() {
 		close(l.ch)
@@ -170,34 +175,42 @@ func (l *Logger) Close() {
 	})
 }
 
+// Info writes an informational message to the log.
 func (l *Logger) Info(msg string) {
 	l.write("INFO", msg)
 }
 
+// Infof writes a formatted informational message to the log.
 func (l *Logger) Infof(format string, args ...any) {
 	l.Info(fmt.Sprintf(format, args...))
 }
 
+// Error writes an error message to the log.
 func (l *Logger) Error(msg string) {
 	l.write("ERROR", msg)
 }
 
+// Errorf writes a formatted error message to the log.
 func (l *Logger) Errorf(format string, args ...any) {
 	l.Error(fmt.Sprintf(format, args...))
 }
 
+// Warn writes a warning message to the log.
 func (l *Logger) Warn(msg string) {
 	l.write("WARN", msg)
 }
 
+// Warnf writes a formatted warning message to the log.
 func (l *Logger) Warnf(format string, args ...any) {
 	l.Warn(fmt.Sprintf(format, args...))
 }
 
+// Log writes a general log message.
 func (l *Logger) Log(msg string) {
 	l.write("LOG", msg)
 }
 
+// Logf writes a formatted general log message.
 func (l *Logger) Logf(format string, args ...any) {
 	l.Log(fmt.Sprintf(format, args...))
 }
