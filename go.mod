@@ -1,4 +1,4 @@
-module logger
+module github.com/fr0nch/logger
 
 go 1.25.7
 
