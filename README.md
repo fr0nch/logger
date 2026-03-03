@@ -1,0 +1,1 @@
+Simple logger package for Plugify plugins.
