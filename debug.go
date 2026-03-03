@@ -2,6 +2,8 @@
 
 package logger
 
+import "fmt"
+
 // Debug writes a debug message to the log.
 // This method is only available when the "debug" build tag is set.
 func (l *Logger) Debug(msg string) {
