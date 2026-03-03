@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.3](https://github.com/fr0nch/logger/compare/v0.1.2...v0.1.3) (2026-03-03)
+
+
+### Bug Fixes
+
+* undefined fmt ([ee27a1e](https://github.com/fr0nch/logger/commit/ee27a1e7245bee8a053015aae4b7bbf6cea8a6ad))
+
 ## [0.1.2](https://github.com/fr0nch/logger/compare/v0.1.1...v0.1.2) (2026-03-03)
 
 
