@@ -67,7 +67,7 @@ func New() (*Logger, error) {
 // It initializes the log directory, opens the first log file, and starts the background writer.
 func NewWithOptions(opts Options) (*Logger, error) {
 	opts.withDefaults()
-	dir := filepath.Join(plugify.LogsDir, opts.Folder)
+	dir := filepath.Join(plugify.LogsDir(), opts.Folder)
 
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return nil, fmt.Errorf("logger mkdir: %w", err)
@@ -75,7 +75,7 @@ func NewWithOptions(opts Options) (*Logger, error) {
 
 	var prefix string
 	if opts.Folder == "" {
-		prefix = plugify.Plugin.Name + "_"
+		prefix = plugify.Plugin().Name() + "_"
 	}
 
 	l := &Logger{
@@ -150,7 +150,7 @@ func (l *Logger) writeEntry(e logEntry) error {
 		return err
 	}
 
-	data := fmt.Sprintf("%s [%s] [%s] %s\n", e.ts.Format(l.timeFmt), plugify.Plugin.Name, e.level, e.msg)
+	data := fmt.Sprintf("%s [%s] [%s] %s\n", e.ts.Format(l.timeFmt), plugify.Plugin().Name(), e.level, e.msg)
 
 	fmt.Print(data)
 	_, err := fmt.Fprint(l.file, data)
