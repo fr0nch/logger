@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.5](https://github.com/fr0nch/logger/compare/v0.1.4...v0.1.5) (2026-06-25)
+
+
+### Bug Fixes
+
+* update for new plugify ([27c442c](https://github.com/fr0nch/logger/commit/27c442cab952ff72e45fc4a1917816922023efac))
+
 ## [0.1.4](https://github.com/fr0nch/logger/compare/v0.1.3...v0.1.4) (2026-05-25)
 
 
