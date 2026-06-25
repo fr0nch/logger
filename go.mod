@@ -2,7 +2,7 @@ module github.com/fr0nch/logger
 
 go 1.25.7
 
-require github.com/untrustedmodders/go-plugify v1.8.4
+require github.com/untrustedmodders/go-plugify v1.10.1
 
 require (
 	golang.org/x/mod v0.36.0 // indirect

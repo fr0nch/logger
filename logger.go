@@ -17,6 +17,7 @@ const (
 )
 
 type Options struct {
+	PluginName  string
 	Folder      string
 	DateFmt     string
 	TimeFmt     string
@@ -42,6 +43,8 @@ type logEntry struct {
 }
 
 type Logger struct {
+	pluginName string
+
 	dir    string
 	prefix string
 
@@ -60,7 +63,7 @@ type Logger struct {
 
 // New creates a new Logger with default options.
 func New() (*Logger, error) {
-	return NewWithOptions(Options{})
+	return NewWithOptions(Options{PluginName: "plugify"})
 }
 
 // NewWithOptions creates a new Logger with the provided options.
@@ -75,7 +78,11 @@ func NewWithOptions(opts Options) (*Logger, error) {
 
 	var prefix string
 	if opts.Folder == "" {
-		prefix = plugify.Plugin().Name() + "_"
+		pluginName := opts.PluginName
+		if pluginName == "" {
+			pluginName = "plugify"
+		}
+		prefix = pluginName + "_"
 	}
 
 	l := &Logger{
@@ -150,7 +157,7 @@ func (l *Logger) writeEntry(e logEntry) error {
 		return err
 	}
 
-	data := fmt.Sprintf("%s [%s] [%s] %s\n", e.ts.Format(l.timeFmt), plugify.Plugin().Name(), e.level, e.msg)
+	data := fmt.Sprintf("%s [%s] [%s] %s\n", e.ts.Format(l.timeFmt), l.pluginName, e.level, e.msg)
 
 	fmt.Print(data)
 	_, err := fmt.Fprint(l.file, data)
