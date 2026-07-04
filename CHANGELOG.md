@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.6](https://github.com/fr0nch/logger/compare/v0.1.5...v0.1.6) (2026-07-04)
+
+
+### Bug Fixes
+
+* empty plugin name ([95bd964](https://github.com/fr0nch/logger/commit/95bd96445cba38f87193cb9a111c127c7a6270b1))
+
 ## [0.1.5](https://github.com/fr0nch/logger/compare/v0.1.4...v0.1.5) (2026-06-25)
 
 
