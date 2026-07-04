@@ -11,6 +11,7 @@ import (
 )
 
 const (
+	defaultPluginName  = "plugify"
 	defaultDateFmt     = "02_01_2006"
 	defaultTimeFmt     = "02.01.2006 15:04:05"
 	defaultChanBufSize = 128
@@ -63,7 +64,7 @@ type Logger struct {
 
 // New creates a new Logger with default options.
 func New() (*Logger, error) {
-	return NewWithOptions(Options{PluginName: "plugify"})
+	return NewWithOptions(Options{PluginName: defaultPluginName})
 }
 
 // NewWithOptions creates a new Logger with the provided options.
@@ -76,22 +77,23 @@ func NewWithOptions(opts Options) (*Logger, error) {
 		return nil, fmt.Errorf("logger mkdir: %w", err)
 	}
 
+	if len(opts.PluginName) == 0 {
+		opts.PluginName = defaultPluginName
+	}
+
 	var prefix string
 	if opts.Folder == "" {
-		pluginName := opts.PluginName
-		if pluginName == "" {
-			pluginName = "plugify"
-		}
-		prefix = pluginName + "_"
+		prefix = opts.PluginName + "_"
 	}
 
 	l := &Logger{
-		dir:     dir,
-		prefix:  prefix,
-		dateFmt: opts.DateFmt,
-		timeFmt: opts.TimeFmt,
-		ch:      make(chan logEntry, opts.ChanBufSize),
-		done:    make(chan struct{}),
+		pluginName: opts.PluginName,
+		dir:        dir,
+		prefix:     prefix,
+		dateFmt:    opts.DateFmt,
+		timeFmt:    opts.TimeFmt,
+		ch:         make(chan logEntry, opts.ChanBufSize),
+		done:       make(chan struct{}),
 	}
 
 	if err := l.rotate(); err != nil {
