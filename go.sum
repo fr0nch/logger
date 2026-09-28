@@ -1,11 +1,15 @@
 github.com/google/go-cmp v0.6.0 h1:ofyhxvXcZhMsU5ulbFiLKl/XBFqE1GSq7atu8tAmTRI=
 github.com/google/go-cmp v0.6.0/go.mod h1:17dUlkBOakJ0+DkrSSNjCkIjxS6bF9zb3elmeNGIjoY=
+github.com/stretchr/testify v1.12.1 h1:EuwCh5fleGS7H32xRwO3wRGT7DxrDhLAT6FF8MpWDWE=
+github.com/stretchr/testify v1.12.1/go.mod h1:MDEgiDPPsNp5cuIrHPPCyornHKgEVbtFUmoNlxoYthg=
 github.com/untrustedmodders/go-plugify v1.5.0 h1:KCZ62n+5uYibMpJKFR57rMuUa2qHqhOYbKAHUIbJzDg=
 github.com/untrustedmodders/go-plugify v1.5.0/go.mod h1:j+sziXkuxB59jnbrwEGt3T4z3mccwmMpxgCUP3VPQ84=
 github.com/untrustedmodders/go-plugify v1.8.4 h1:rUEhxyh63qcT2iqm19hPP6EM9tUjTErp+EVRepbB8HM=
 github.com/untrustedmodders/go-plugify v1.8.4/go.mod h1:j+sziXkuxB59jnbrwEGt3T4z3mccwmMpxgCUP3VPQ84=
 github.com/untrustedmodders/go-plugify v1.10.1 h1:FDCMF5OFxMnpkn6kkgmahfl5+zCbhAeTy+9ScbIhVns=
 github.com/untrustedmodders/go-plugify v1.10.1/go.mod h1:j+sziXkuxB59jnbrwEGt3T4z3mccwmMpxgCUP3VPQ84=
+go.yaml.in/yaml/v3 v3.0.5 h1:N6y/pJk8buWs9NY5ERU2HSMfm+IuD/OtfdAnq6kESPw=
+go.yaml.in/yaml/v3 v3.0.5/go.mod h1:HVTZu1O7/Vkt2N+BFy8Zza+lnLsABggaTM2ZpNIGuKg=
 golang.org/x/mod v0.30.0 h1:fDEXFVZ/fmCKProc/yAXXUijritrDzahmwwefnjoPFk=
 golang.org/x/mod v0.30.0/go.mod h1:lAsf5O2EvJeSFMiBxXDki7sCgAxEUcZHXoXMKT4GJKc=
 golang.org/x/mod v0.36.0 h1:JJjpVx6myfUsUdAzZuOSTTmRE0PfZeNWzzvKrP7amb4=
