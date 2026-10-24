@@ -5,7 +5,6 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"github.com/untrustedmodders/go-plugify"
@@ -21,7 +20,6 @@ const (
 type Options struct {
 	PluginName  string
 	Folder      string
-	Dir         string
 	DateFmt     string
 	TimeFmt     string
 	ChanBufSize int
@@ -36,12 +34,6 @@ func (o *Options) withDefaults() {
 	}
 	if o.ChanBufSize <= 0 {
 		o.ChanBufSize = defaultChanBufSize
-	}
-	if o.Dir == "" {
-		o.Dir = plugify.LogsDir()
-	}
-	if o.Dir == "" {
-		o.Dir = "logs"
 	}
 }
 
@@ -64,8 +56,8 @@ type Logger struct {
 	done chan struct{}
 	once sync.Once
 
-	closedDone atomic.Bool
-	closeMu    sync.RWMutex
+	mu     sync.RWMutex
+	closed bool
 
 	file     *os.File
 	filePath string
@@ -82,7 +74,7 @@ func New() (*Logger, error) {
 // It initializes the log directory, opens the first log file, and starts the background writer.
 func NewWithOptions(opts Options) (*Logger, error) {
 	opts.withDefaults()
-	dir := filepath.Join(opts.Dir, opts.Folder)
+	dir := filepath.Join(plugify.LogsDir(), opts.Folder)
 
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return nil, fmt.Errorf("logger mkdir: %w", err)
@@ -179,30 +171,28 @@ func (l *Logger) writeEntry(e logEntry) error {
 }
 
 func (l *Logger) write(level, msg string) {
-	if l.closedDone.Load() {
+	l.mu.RLock()
+	defer l.mu.RUnlock()
+
+	if l.closed {
 		return
 	}
 
-	e := logEntry{level: level, msg: msg, ts: time.Now()}
-
-	l.closeMu.RLock()
-	defer l.closeMu.RUnlock()
-
-	if l.closedDone.Load() {
-		return
+	l.ch <- logEntry{
+		level: level,
+		msg:   msg,
+		ts:    time.Now(),
 	}
-
-	l.ch <- e
 }
 
 // Close gracefully shuts down the logger, flushing all pending log entries and closing the log file.
 // It is safe to call Close multiple times.
 func (l *Logger) Close() {
 	l.once.Do(func() {
-		l.closeMu.Lock()
+		l.mu.Lock()
+		l.closed = true
 		close(l.ch)
-		l.closedDone.Store(true)
-		l.closeMu.Unlock()
+		l.mu.Unlock()
 
 		<-l.done
 	})
