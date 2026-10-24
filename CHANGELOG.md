@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.1.7](https://github.com/fr0nch/logger/compare/v0.1.6...v0.1.7) (2026-10-24)
+
+
+### Bug Fixes
+
+* **deps:** update go-plugify to v1.10.6 ([c4c3a25](https://github.com/fr0nch/logger/commit/c4c3a2592703215a60c3a7d9efc2d50617ad8377))
+* do not block callers when the log buffer is full ([c5d0760](https://github.com/fr0nch/logger/commit/c5d0760f2dc9650507c549e2e63cc60d7cc08d5a))
+* send on closed channel ([#7](https://github.com/fr0nch/logger/issues/7)) ([e986d5e](https://github.com/fr0nch/logger/commit/e986d5e5e59b54fcb0ca3ce08fe4d860f89be6b8))
+
 ## [0.1.6](https://github.com/fr0nch/logger/compare/v0.1.5...v0.1.6) (2026-07-04)
 
 
