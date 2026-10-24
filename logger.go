@@ -56,6 +56,9 @@ type Logger struct {
 	done chan struct{}
 	once sync.Once
 
+	mu     sync.RWMutex
+	closed bool
+
 	file     *os.File
 	filePath string
 
@@ -168,6 +171,13 @@ func (l *Logger) writeEntry(e logEntry) error {
 }
 
 func (l *Logger) write(level, msg string) {
+	l.mu.RLock()
+	defer l.mu.RUnlock()
+
+	if l.closed {
+		return
+	}
+
 	l.ch <- logEntry{
 		level: level,
 		msg:   msg,
@@ -179,7 +189,11 @@ func (l *Logger) write(level, msg string) {
 // It is safe to call Close multiple times.
 func (l *Logger) Close() {
 	l.once.Do(func() {
+		l.mu.Lock()
+		l.closed = true
 		close(l.ch)
+		l.mu.Unlock()
+
 		<-l.done
 	})
 }
