@@ -2,9 +2,12 @@ package logger
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
+	"strconv"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/untrustedmodders/go-plugify"
@@ -14,7 +17,16 @@ const (
 	defaultPluginName  = "plugify"
 	defaultDateFmt     = "02_01_2006"
 	defaultTimeFmt     = "02.01.2006 15:04:05"
-	defaultChanBufSize = 128
+	defaultChanBufSize = 1024
+)
+
+const (
+	// maxBatchBytes limits how much formatted output the writer accumulates before flushing it.
+	maxBatchBytes = 64 << 10
+
+	// fileCheckInterval limits how often the writer checks that the log file still exists
+	// on disk and how often it retries opening the file after a failure.
+	fileCheckInterval = time.Second
 )
 
 type Options struct {
@@ -26,6 +38,9 @@ type Options struct {
 }
 
 func (o *Options) withDefaults() {
+	if o.PluginName == "" {
+		o.PluginName = defaultPluginName
+	}
 	if o.DateFmt == "" {
 		o.DateFmt = defaultDateFmt
 	}
@@ -43,6 +58,8 @@ type logEntry struct {
 	ts    time.Time
 }
 
+// Logger writes log entries to stdout and to a daily log file from a background goroutine.
+// It is safe for concurrent use. Call Close to flush pending entries and stop the writer.
 type Logger struct {
 	pluginName string
 
@@ -59,10 +76,15 @@ type Logger struct {
 	mu     sync.RWMutex
 	closed bool
 
+	dropped atomic.Uint64
+
+	console  io.Writer
 	file     *os.File
 	filePath string
 
-	date string
+	date      string
+	lastCheck time.Time
+	lastErr   error
 }
 
 // New creates a new Logger with default options.
@@ -80,10 +102,6 @@ func NewWithOptions(opts Options) (*Logger, error) {
 		return nil, fmt.Errorf("logger mkdir: %w", err)
 	}
 
-	if len(opts.PluginName) == 0 {
-		opts.PluginName = defaultPluginName
-	}
-
 	var prefix string
 	if opts.Folder == "" {
 		prefix = opts.PluginName + "_"
@@ -97,6 +115,7 @@ func NewWithOptions(opts Options) (*Logger, error) {
 		timeFmt:    opts.TimeFmt,
 		ch:         make(chan logEntry, opts.ChanBufSize),
 		done:       make(chan struct{}),
+		console:    os.Stdout,
 	}
 
 	if err := l.rotate(); err != nil {
@@ -108,11 +127,39 @@ func NewWithOptions(opts Options) (*Logger, error) {
 	return l, nil
 }
 
+// worker drains the channel in batches: everything already queued is written
+// with one call to the console and one to the file instead of two writes per entry.
 func (l *Logger) worker() {
 	defer close(l.done)
 
-	for entry := range l.ch {
-		_ = l.writeEntry(entry)
+	buf := make([]byte, 0, maxBatchBytes)
+
+	for e := range l.ch {
+		buf = l.appendEntry(buf[:0], e)
+
+	drain:
+		for len(buf) < maxBatchBytes {
+			select {
+			case e, ok := <-l.ch:
+				if !ok {
+					break drain
+				}
+				buf = l.appendEntry(buf, e)
+			default:
+				break drain
+			}
+		}
+
+		l.flush(l.appendDropped(buf))
+
+		// Do not keep a buffer grown by a huge message alive forever.
+		if cap(buf) > 2*maxBatchBytes {
+			buf = make([]byte, 0, maxBatchBytes)
+		}
+	}
+
+	if buf = l.appendDropped(buf[:0]); len(buf) > 0 {
+		l.flush(buf)
 	}
 
 	if l.file != nil {
@@ -121,18 +168,26 @@ func (l *Logger) worker() {
 }
 
 func (l *Logger) rotate() error {
-	today := time.Now().Format(l.dateFmt)
-	needRotate := l.file == nil || l.date != today
+	now := time.Now()
+	today := now.Format(l.dateFmt)
 
-	if !needRotate {
-		if _, err := os.Stat(l.filePath); os.IsNotExist(err) {
-			needRotate = true
+	if l.file != nil && l.date == today {
+		if now.Sub(l.lastCheck) < fileCheckInterval {
+			return nil
+		}
+
+		l.lastCheck = now
+
+		if _, err := os.Stat(l.filePath); !os.IsNotExist(err) {
+			return nil
 		}
 	}
 
-	if !needRotate {
-		return nil
+	if l.file == nil && l.lastErr != nil && now.Sub(l.lastCheck) < fileCheckInterval {
+		return l.lastErr
 	}
+
+	l.lastCheck = now
 
 	if l.file != nil {
 		_ = l.file.Close()
@@ -157,31 +212,70 @@ func (l *Logger) rotate() error {
 	return nil
 }
 
-func (l *Logger) writeEntry(e logEntry) error {
-	if err := l.rotate(); err != nil {
-		return err
-	}
+func (l *Logger) appendEntry(buf []byte, e logEntry) []byte {
+	buf = e.ts.AppendFormat(buf, l.timeFmt)
+	buf = append(buf, " ["...)
+	buf = append(buf, l.pluginName...)
+	buf = append(buf, "] ["...)
+	buf = append(buf, e.level...)
+	buf = append(buf, "] "...)
+	buf = append(buf, e.msg...)
 
-	data := fmt.Sprintf("%s [%s] [%s] %s\n", e.ts.Format(l.timeFmt), l.pluginName, e.level, e.msg)
-
-	fmt.Print(data)
-	_, err := fmt.Fprint(l.file, data)
-
-	return err
+	return append(buf, '\n')
 }
 
-func (l *Logger) write(level, msg string) {
+func (l *Logger) appendDropped(buf []byte) []byte {
+	n := l.dropped.Swap(0)
+	if n == 0 {
+		return buf
+	}
+
+	return l.appendEntry(buf, logEntry{
+		level: "WARN",
+		msg:   "dropped " + strconv.FormatUint(n, 10) + " log messages: buffer is full",
+		ts:    time.Now(),
+	})
+}
+
+func (l *Logger) flush(buf []byte) {
+	_, _ = l.console.Write(buf)
+
+	err := l.rotate()
+	if err == nil {
+		_, err = l.file.Write(buf)
+	}
+
+	l.reportErr(err)
+}
+
+// reportErr prints log file errors to stderr once per distinct error,
+// so a broken log file is visible without flooding the console.
+func (l *Logger) reportErr(err error) {
+	switch {
+	case err != nil && (l.lastErr == nil || l.lastErr.Error() != err.Error()):
+		fmt.Fprintf(os.Stderr, "[%s] logger: %v\n", l.pluginName, err)
+	case err == nil && l.lastErr != nil:
+		fmt.Fprintf(os.Stderr, "[%s] logger: log file recovered: %s\n", l.pluginName, l.filePath)
+	}
+
+	l.lastErr = err
+}
+
+// write queues an entry and reports whether it was accepted.
+func (l *Logger) write(level, msg string) bool {
 	l.mu.RLock()
 	defer l.mu.RUnlock()
 
 	if l.closed {
-		return
+		return false
 	}
 
-	l.ch <- logEntry{
-		level: level,
-		msg:   msg,
-		ts:    time.Now(),
+	select {
+	case l.ch <- logEntry{level: level, msg: msg, ts: time.Now()}:
+		return true
+	default:
+		l.dropped.Add(1)
+		return false
 	}
 }
 
